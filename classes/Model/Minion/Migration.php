@@ -229,7 +229,7 @@ class Model_Minion_Migration extends Model
 	 */
 	protected function _select()
 	{
-		return DB::select('*', DB::expr('CONCAT(`group`, ":", CAST(`timestamp` AS CHAR)) AS `id`'))->from($this->_table);
+		return DB::select('m.*', DB::expr('CONCAT("m"."group", \':\', CAST("m"."timestamp" AS CHAR)) AS "id"'))->from(array($this->_table, 'm'));
 	}
 
 	/**
@@ -370,15 +370,14 @@ class Model_Minion_Migration extends Model
 	 */
 	public function fetch_current_versions($key = 'group', $value = NULL)
 	{
-		// Little hack needed to do an order by before a group by
-		return DB::select()
-			->from(array(
-				$this->_select()
-				->where('applied', '>', 0)
-				->order_by('timestamp', 'DESC'),
-				'temp_table'
-			))
-			->group_by('group')
+		// Little hack to return latest applied migration 
+		return $this->_select()
+			->where('m.timestamp', 'IN',
+				DB::select('MAX("maxtimestamp"."timestamp")')
+				->from(array($this->_table, 'maxtimestamp'))
+				->where('maxtimestamp.group','=','mm.group')
+				->where('maxtimestamp.applied','>','0')
+			)
 			->execute($this->_db)
 			->as_array($key, $value);
 	}
@@ -390,7 +389,7 @@ class Model_Minion_Migration extends Model
 	 */
 	public function fetch_groups($group_as_key = FALSE)
 	{
-		return DB::select()
+		return DB::select('group')
 			->from($this->_table)
 			->group_by('group')
 			->execute($this->_db)
