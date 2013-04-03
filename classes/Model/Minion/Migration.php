@@ -167,11 +167,10 @@ class Model_Minion_Migration extends Model
 	 */
 	public function ensure_table_exists()
 	{
-		$query = $this->_db->query(Database::SELECT, "SHOW TABLES like '".$this->_table."'");
-
+		$query = $this->_db->list_tables($this->_table);
 		if ( ! count($query))
 		{
-			$sql = View::factory('minion/task/migrations/schema')
+			$sql = View::factory('minion/task/migrations/schema.'. $this->get_database_type())
 				->set('table_name', $this->_table)
 				->render();
 
@@ -576,4 +575,13 @@ class Model_Minion_Migration extends Model
 		return array( (string) $results->get('timestamp'), $up);
 	}
 
+	/**
+	 * Get database type
+	 * 
+	 * @return string DB type lowercased (mysql | postgresql)
+	 */
+	public function get_database_type()
+	{
+		return strtolower(substr(get_class($this->_db),9));
+	}
 }
